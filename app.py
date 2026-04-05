@@ -33,16 +33,61 @@ if "messages" not in st.session_state:
 # --- UI 样式 (沿用之前的极简纯色) ---
 st.markdown(f"""
     <style>
-        header, footer {{ visibility: hidden; }}
-        .stApp {{ background-color: #0A0A2A; color: white; }}
-        /* 这里保留你之前喜欢的对话气泡 CSS */
-    </style>
+    /* 1. 基础清场：隐藏 Streamlit 所有官方边角料 */
+    header, footer { visibility: hidden !important; }
+    [data-testid="stHeader"] { display: none !important; }
+    .stDeployButton { display: none !important; }
+
+    /* 2. 核心：抹除 "assistant" 和 "user" 这两行字 */
+    div[data-testid="stChatMessage"] p[data-testid="stWidgetLabel"] {
+        display: none !important;
+    }
+    div[data-testid="chatAvatar"] {
+        margin-top: 5px; /* 让头像和第一行字对齐 */
+    }
+
+    /* 3. 气泡整容：从“长方形”变成“柔和圆角” */
+    div[data-testid="stChatMessage"] {
+        background-color: transparent !important; /* 抹除原生背景，我们要自定义 */
+        padding: 0.5rem 0 !important;
+    }
+
+    /* 路辰的气泡 (Assistant) */
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarAssistant"]) {
+        flex-direction: row !important;
+    }
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarAssistant"]) .stMarkdown {
+        background-color: #1A1A40; /* 你的路辰专属色 */
+        border: 1px solid #C0A080;
+        border-radius: 4px 18px 18px 18px !important;
+        padding: 12px 16px;
+        color: white;
+    }
+
+    /* 你的气泡 (User) */
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) {
+        flex-direction: row-reverse !important;
+    }
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) .stMarkdown {
+        background-color: #2E2E2E;
+        border: 1px solid #5C5C5C;
+        border-radius: 18px 4px 18px 18px !important;
+        padding: 10px 14px;
+        color: white;
+    }
+
+    /* 4. 全局沉浸：背景色补齐 */
+    .stApp { background-color: #0A0A2A; }
+</style>
+
 """, unsafe_allow_html=True)
 
 # 渲染历史
 for msg in st.session_state.messages:
-    # 这里用你之前的 HTML 渲染逻辑...
-    st.write(f"{msg['role']}: {msg['content']}")
+    # 只要用 st.chat_message，它就会自动生成带头像、带气泡、支持移动端适配的 Gemini 布局
+    # 如果你有 icon.png，建议加上 avatar="icon.png"
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
 # --- 聊天逻辑 ---
 if user_input := st.chat_input("和路辰聊聊..."):
