@@ -33,61 +33,142 @@ if "messages" not in st.session_state:
 # --- UI 样式 (沿用之前的极简纯色) ---
 st.markdown(f"""
     <style>
-    /* 1. 基础清场：隐藏 Streamlit 所有官方边角料 */
-    header, footer { visibility: hidden !important; }
-    [data-testid="stHeader"] { display: none !important; }
-    .stDeployButton { display: none !important; }
+       /* --- 终极抹除底部所有 Streamlit 痕迹 (三重保险) --- */
+    
+    /* 1. 隐藏官方页脚和菜单 */
+    footer {visibility: hidden !important; height: 0px !important; margin: 0px !important;}
+    #MainMenu {visibility: hidden !important;}
+    header {visibility: hidden !important;}
 
-    /* 2. 核心：抹除 "assistant" 和 "user" 这两行字 */
-    div[data-testid="stChatMessage"] p[data-testid="stWidgetLabel"] {
+    /* 2. 暴力切断底部“Manage app”和“登录信息”容器 */
+    /* 针对最新版 Streamlit Cloud 的悬浮工具栏 */
+    div[data-testid="stStatusWidget"], 
+    .stDeployButton,
+    div[class*="viewerBadge"],
+    div[class*="StreamlitToolbar"],
+    div[class*="stStyledBox"] {
         display: none !important;
     }
-    div[data-testid="chatAvatar"] {
-        margin-top: 5px; /* 让头像和第一行字对齐 */
-    }
 
-    /* 3. 气泡整容：从“长方形”变成“柔和圆角” */
-    div[data-testid="stChatMessage"] {
-        background-color: transparent !important; /* 抹除原生背景，我们要自定义 */
-        padding: 0.5rem 0 !important;
+    /* 3. 强制内容区撑满底部，不给那一横条留空间 */
+    .block-container {
+        padding-bottom: 0rem !important;
+    }
+    
+    /* 针对某些安卓浏览器会在底部留白的修补 */
+    .stApp {
+        bottom: 0 !important;
+        position: fixed !important;
+        width: 100vw !important;
+        height: 100vh !important;
+    }
+ 
+    /* 1. 基础清场：隐藏所有不需要的官方组件 */
+    footer, #MainMenu {{ visibility: hidden !important; }}
+    [data-testid="stHeader"], .stDeployButton {{ display: none !important; }}
+    div[data-testid="stStatusWidget"] {{ display: none !important; }}
+
+    /* 2. 【核心】自定义全局背景图片 */
+    /* 请把下面的图片链接换成你自己的（支持在线链接或 Base64） */
+    .stApp {{
+        background-image: url("https://github.com/Alkaidshelter/sunshineRome/blob/main/QQ%E5%9B%BE%E7%89%8720260405174515.jpg"); 
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed; /* 关键：背景固定，聊天气泡滚动 */
+    }}
+
+    /* 3. 复活“三条杠”菜单按钮 (奶油色微调) */
+    header[data-testid="stHeader"] {{
+        display: flex !important;
+        background: transparent !important;
+        height: 3.5rem !important;
+        border: none !important;
+        z-index: 99999 !important;
+    }}
+    header[data-testid="stHeader"] > div:first-child {{
+        display: flex !important;
+    }}
+    button[kind="header"] {{
+        color: #C0A080 !important; /* 金色菜单按钮 */
+        background-color: rgba(255, 255, 255, 0.4) !important; /* 半透明底，衬托图片 */
+        border-radius: 50% !important;
+        margin-left: 10px !important;
+    }}
+
+    /* 4. 暴力隐藏气泡上方的 assistant/user 标签 */
+    [data-testid="stChatMessage"] div[data-testid="stMarkdownContainer"] > p:first-child:has(+ *) {{
+        display: none !important;
+    }
+    div[data-testid="chatAvatar"] + div {{
+        display: flex;
+        flex-direction: column;
+    }}
+    .stChatMessage [data-testid="stWidgetLabel"],
+    .stChatMessage .st-ae,
+    .stChatMessage code {{
+        display: none !important;
+    }}
+
+    /* 5. 【核心】气泡整容：圆角长方形 + 你选的奶油色 */
+    [data-testid="stChatMessage"] {{
+        background-color: transparent !important;
+        padding: 0.8rem 0 !important;
+        gap: 8px !important; /* 头像和气泡优雅间距 */
     }
 
     /* 路辰的气泡 (Assistant) */
-    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarAssistant"]) {
-        flex-direction: row !important;
-    }
-    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarAssistant"]) .stMarkdown {
-        background-color: #1A1A40; /* 你的路辰专属色 */
-        border: 1px solid #C0A080;
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarAssistant"]) .stMarkdown {{
+        background-color: #FBF2E2 !important; /* 老大选的路辰奶油黄 */
+        border: 1px solid rgba(192, 160, 128, 0.2) !important; /* 超细金色描边 */
         border-radius: 4px 18px 18px 18px !important;
-        padding: 12px 16px;
-        color: white;
+        padding: 12px 16px !important;
+        color: #5D4037 !important; /* 深棕色文字，保护眼睛且更有质感 */
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
     }
+    /* 修改默认头像颜色，防白 */
+    div[data-testid="chatAvatarAssistant"] svg {{
+        fill: #C0A080 !important;
+    }}
 
     /* 你的气泡 (User) */
-    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) {
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) {{
         flex-direction: row-reverse !important;
     }
-    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) .stMarkdown {
-        background-color: #2E2E2E;
-        border: 1px solid #5C5C5C;
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) .stMarkdown {{
+        background-color: #FFEFD7 !important; /* 老大选的用户奶油粉 */
+        border: 1px solid rgba(255, 239, 215, 0.3) !important;
         border-radius: 18px 4px 18px 18px !important;
-        padding: 10px 14px;
-        color: white;
+        padding: 10px 14px !important;
+        color: #5D4037 !important; /* 深棕色文字 */
     }
+    /* 修改用户头像颜色 */
+    div[data-testid="chatAvatarUser"] svg {{
+        fill: #5C5C5C !important;
+    }}
 
-    /* 4. 全局沉浸：背景色补齐 */
-    .stApp { background-color: #0A0A2A; }
+    /* 6. 输入框美化 (浮动悬浮感) */
+    .stChatInputContainer {{
+        padding-bottom: 25px !important;
+        background-color: transparent !important;
+    }
+    .stChatInput {{
+        background-color: rgba(255, 255, 255, 0.8) !important; /* 半透明输入框 */
+        border-radius: 20px !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+    }
 </style>
+
+
 
 """, unsafe_allow_html=True)
 
 # 渲染历史
 for msg in st.session_state.messages:
-    # 只要用 st.chat_message，它就会自动生成带头像、带气泡、支持移动端适配的 Gemini 布局
-    # 如果你有 icon.png，建议加上 avatar="icon.png"
-    with st.chat_message(msg["role"]):
+    # 这一行是关键！千万不要写成 with st.chat_message("路辰"):
+    # 必须写 msg["role"] 或者 "assistant" / "user"
+    with st.chat_message("assistant" / "user"):
         st.markdown(msg["content"])
+
 
 # --- 聊天逻辑 ---
 if user_input := st.chat_input("和路辰聊聊..."):
