@@ -93,9 +93,9 @@ st.markdown(custom_css, unsafe_allow_html=True)
 
 # 渲染历史
 for msg in st.session_state.messages:
-    # 这一行是关键！千万不要写成 with st.chat_message("路辰"):
-    # 必须写 msg["role"] 或者 "assistant" / "user"
-    with st.chat_message("assistant" / "user"):
+    # 关键修改：直接传入变量 msg["role"]
+    # 它会自动判断是 "user" 还是 "assistant"
+    with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
 
