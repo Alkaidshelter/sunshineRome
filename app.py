@@ -91,14 +91,14 @@ custom_css = """
 st.markdown(custom_css, unsafe_allow_html=True)
 
 
-# 渲染历史
-for msg in st.session_state.messages:
-    # 关键修改：直接传入变量 msg["role"]
-    # 它会自动判断是 "user" 还是 "assistant"
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-
+# 渲染历史（安全增强版）
+if "messages" in st.session_state:
+    for msg in st.session_state.messages:
+        # 增加判断：只有当 msg 是字典且包含 'role' 和 'content' 时才渲染
+        if isinstance(msg, dict) and "role" in msg and "content" in msg:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+                
 # --- 聊天逻辑 ---
 if user_input := st.chat_input("和路辰聊聊..."):
     st.session_state.messages.append({"role": "user", "content": user_input})
