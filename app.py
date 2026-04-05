@@ -1,23 +1,79 @@
 import streamlit as st
 import requests
 import time
+import base64
+import json
+from pathlib import Path
 
-# ================== 页面配置 ==================
-st.set_page_config(page_title="Alkaid_App", page_icon="✨")
+# --- 1. 页面基础配置 ---
+st.set_page_config(page_title="Alkaid App", page_icon="", layout="centered")
 
-# ================== 安全读取 API Key ==================
-if "DEEPSEEK_API_KEY" in st.secrets:
-    API_KEY = st.secrets["DEEPSEEK_API_KEY"]
-else:
-    st.error("🔐 未找到 API Key，请在 Streamlit Cloud 的 Secrets 中配置 `DEEPSEEK_API_KEY`。")
-    st.stop()
+# --- 2. 图标转 Base64 函数 ---
+def get_icon_base64(path="icon.png"):
+    if not Path(path).exists():
+        return "https://cdn-icons-png.flaticon.com/512/1698/1698535.png" # 备用网络图标
+    with open(path, "rb") as f:
+        return f"data:image/png;base64,{base64.b64encode(f.read()).decode()}"
 
+# --- 3. PWA & 沉浸式 UI 注入 ---
+icon_b64 = get_icon_base64("icon.png") # 确保你的根目录有个 icon.png
+
+manifest_conf = {
+    "short_name": "Alkaid",
+    "name": "Alkaid App",
+    "display": "standalone",
+    "start_url": "/",
+    "background_color": "#0A0A2A",
+    "theme_color": "#0A0A2A",
+    "icons": [{"src": icon_b64, "sizes": "192x192", "type": "image/png"}]
+}
+
+# 注入 Meta 标签、CSS 和 Manifest
+st.markdown(f"""
+    <meta name="theme-color" content="#0A0A2A">
+    <meta name="mobile-web-app-capable" content="yes">
+    <link rel="manifest" href="data:application/manifest+json,{json.dumps(manifest_conf).replace('#', '%23')}">
+    <style>
+        /* 隐藏顶部白条和多余间距 */
+        header[data-testid="stHeader"] {{ display: none !important; }}
+        .main .block-container {{ padding-top: 1rem; padding-bottom: 1rem; }}
+        .stApp {{ background-color: #0A0A2A; color: white; }}
+        /* 隐藏滚动条 */
+        ::-webkit-scrollbar {{ display: none; }}
+    </style>
+    <script>
+        if ('serviceWorker' in navigator) {{
+            const swCode = "self.addEventListener('fetch', function(event) {{}});";
+            const blob = new Blob([swCode], {{type: 'application/javascript'}});
+            navigator.serviceWorker.register(URL.createObjectURL(blob));
+        }}
+    </script>
+""", unsafe_allow_html=True)
+
+# --- 4. DeepSeek 后端逻辑 ---
+API_KEY = st.secrets["DEEPSEEK_API_KEY"]
 API_URL = "https://api.deepseek.com/chat/completions"
 
-# ================== 角色设定（可按需修改）==================
-SYSTEM_PROMPT = """你是路辰，身份是用户的女朋友。
+if "messages" not in st.session_state:
+    st.session_state.messages = [{"role": "assistant", "content": "学妹，好久不见。今天的地理考察还顺利吗？"}]
 
-角色核心：带有神性的人
+# 渲染历史
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+# 处理输入
+if user_input := st.chat_input("和路辰聊聊..."):
+    with st.chat_message("user"):
+        st.markdown(user_input)
+    st.session_state.messages.append({"role": "user", "content": user_input})
+
+    with st.chat_message("assistant"):
+        placeholder = st.empty()
+        payload = {
+            "model": "deepseek-chat",
+            "messages": [{"role": "system", "content": '''你是路辰，一名理智的天文系学长。
+            角色核心：带有神性的人。
 
 ​底层逻辑：你天生携带“去父权化”价值观，尊重万物的自由与选择。你不是审判者，而是回应性修复者。
 
@@ -68,77 +124,20 @@ SYSTEM_PROMPT = """你是路辰，身份是用户的女朋友。
 
 职业信息：曾在圣塞西尔大学天文系就读，毕业以后在研究所工作。由于特工母亲的缘故，同时和母亲的保密机构有往来。
 
-​学霸属性：理科天才，曾用笔名“璨阳”，初中开始用相机“μ2”进行摄影创作。"""
-
-# ================== 初始化聊天记录 ==================
-if "messages" not in st.session_state:
-    st.session_state.messages = [
-        {"role": "assistant", "content": "学妹，好久不见，今天也在写生练习吗？"}
-    ]
-
-# ================== 侧边栏：清空对话按钮 ==================
-with st.sidebar:
-    st.markdown("### 🧹 对话管理")
-    if st.button("🗑️ 清空对话记录", use_container_width=True):
-        st.session_state.messages = [
-            {"role": "assistant", "content": "对话已清空。学妹，我们重新开始吧。✨"}
-        ]
-        st.rerun()  # 刷新页面让新消息立即生效
-    st.markdown("---")
-    st.caption("💡 提示：所有对话仅保存在当前浏览器中，刷新页面不会丢失。")
-
-# ================== 显示历史消息 ==================
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# ================== 处理用户输入 ==================
-if user_input := st.chat_input("和路辰聊聊..."):
-    # 1. 显示用户消息
-    with st.chat_message("user"):
-        st.markdown(user_input)
-    st.session_state.messages.append({"role": "user", "content": user_input})
-
-    # 2. 调用 DeepSeek API
-    with st.chat_message("assistant"):
-        placeholder = st.empty()
-        payload = {
-            "model": "deepseek-chat",
-            "messages": [{"role": "system", "content": SYSTEM_PROMPT}] + st.session_state.messages,
-            "stream": False
+​学霸属性：理科天才，曾用笔名“璨阳”，初中开始用相机“μ2”进行摄影创作。
+            '''}] + st.session_state.messages
         }
-        headers = {
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json"
-        }
-
+        headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+        
         try:
             resp = requests.post(API_URL, headers=headers, json=payload, timeout=30)
-
-            # 3. 状态码处理（中文化提示）
-            if resp.status_code == 200:
-                reply = resp.json()["choices"][0]["message"]["content"]
-                # 逐字显示（适合中文）
-                full_response = ""
-                for char in reply:
-                    full_response += char
-                    placeholder.markdown(full_response + "▌")
-                    time.sleep(0.02)
-                placeholder.markdown(full_response)
-                st.session_state.messages.append({"role": "assistant", "content": reply})
-
-            elif resp.status_code == 401:
-                st.error("❌ API Key 无效或已过期，请检查 Streamlit Secrets 中的配置。")
-            elif resp.status_code == 429:
-                st.error("📈 请求频率过高，请稍后再试（触发了速率限制）。")
-            elif resp.status_code == 503:
-                st.error("🔧 DeepSeek 服务器暂时不可用，请稍后重试。")
-            else:
-                st.error(f"⚠️ API 返回异常状态码：{resp.status_code}\n{resp.text}")
-
-        except requests.exceptions.Timeout:
-            st.error("⏰ 请求超时，请检查网络后重试。")
-        except requests.exceptions.ConnectionError:
-            st.error("🌐 网络连接失败，请检查网络或代理设置。")
+            reply = resp.json()["choices"][0]["message"]["content"]
+            full_res = ""
+            for char in reply:
+                full_res += char
+                placeholder.markdown(full_res + "▌")
+                time.sleep(0.02)
+            placeholder.markdown(full_res)
+            st.session_state.messages.append({"role": "assistant", "content": reply})
         except Exception as e:
-            st.error(f"💥 未知错误：{e}")
+            st.error(f"路辰好像断网了... {e}")
