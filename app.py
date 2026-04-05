@@ -55,7 +55,7 @@ API_KEY = st.secrets["DEEPSEEK_API_KEY"]
 API_URL = "https://api.deepseek.com/chat/completions"
 
 if "messages" not in st.session_state:
-    st.session_state.messages = [{"role": "assistant", "content": "学妹，好久不见。今天的地理考察还顺利吗？"}]
+    st.session_state.messages = [{"role": "assistant", "content": "学妹，好久不见。今天的写生还顺利吗？"}]
 
 # 渲染历史
 for msg in st.session_state.messages:
