@@ -31,136 +31,65 @@ if "messages" not in st.session_state:
         st.session_state.messages = [{"role": "assistant", "content": "学妹，好久不见。"}]
 
 # --- UI 样式 (沿用之前的极简纯色) ---
-st.markdown(f"""
-    <style>
-       /* --- 终极抹除底部所有 Streamlit 痕迹 (三重保险) --- */
-    
-    /* 1. 隐藏官方页脚和菜单 */
-    footer {visibility: hidden !important; height: 0px !important; margin: 0px !important;}
-    #MainMenu {visibility: hidden !important;}
-    header {visibility: hidden !important;}
-
-    /* 2. 暴力切断底部“Manage app”和“登录信息”容器 */
-    /* 针对最新版 Streamlit Cloud 的悬浮工具栏 */
-    div[data-testid="stStatusWidget"], 
-    .stDeployButton,
-    div[class*="viewerBadge"],
-    div[class*="StreamlitToolbar"],
-    div[class*="stStyledBox"] {
-        display: none !important;
-    }
-
-    /* 3. 强制内容区撑满底部，不给那一横条留空间 */
-    .block-container {
-        padding-bottom: 0rem !important;
-    }
-    
-    /* 针对某些安卓浏览器会在底部留白的修补 */
+# 1. 先定义一个纯净的字符串变量（不带 f，编辑器就不会去解析里面的大括号）
+custom_css = """
+<style>
+    /* 全局背景 */
     .stApp {
-        bottom: 0 !important;
-        position: fixed !important;
-        width: 100vw !important;
-        height: 100vh !important;
-    }
- 
-    /* 1. 基础清场：隐藏所有不需要的官方组件 */
-    footer, #MainMenu {{ visibility: hidden !important; }}
-    [data-testid="stHeader"], .stDeployButton {{ display: none !important; }}
-    div[data-testid="stStatusWidget"] {{ display: none !important; }}
-
-    /* 2. 【核心】自定义全局背景图片 */
-    /* 请把下面的图片链接换成你自己的（支持在线链接或 Base64） */
-    .stApp {{
         background-image: url("https://github.com/Alkaidshelter/sunshineRome/blob/main/QQ%E5%9B%BE%E7%89%8720260405174515.jpg"); 
         background-size: cover;
         background-position: center;
-        background-attachment: fixed; /* 关键：背景固定，聊天气泡滚动 */
-    }}
+        background-attachment: fixed;
+    }
 
-    /* 3. 复活“三条杠”菜单按钮 (奶油色微调) */
-    header[data-testid="stHeader"] {{
+    /* 暴力除胶：隐藏底部所有痕迹 */
+    footer {visibility: hidden !important; height: 0px !important;}
+    #MainMenu {visibility: hidden !important;}
+    div[data-testid="stStatusWidget"], .stDeployButton {display: none !important;}
+    div[class*="viewerBadge"], div[class*="StreamlitToolbar"] {display: none !important;}
+
+    /* 复活左上角三条杠 */
+    header[data-testid="stHeader"] {
         display: flex !important;
         background: transparent !important;
-        height: 3.5rem !important;
-        border: none !important;
         z-index: 99999 !important;
-    }}
-    header[data-testid="stHeader"] > div:first-child {{
-        display: flex !important;
-    }}
-    button[kind="header"] {{
-        color: #C0A080 !important; /* 金色菜单按钮 */
-        background-color: rgba(255, 255, 255, 0.4) !important; /* 半透明底，衬托图片 */
+    }
+    button[kind="header"] {
+        color: #C0A080 !important;
+        background-color: rgba(255, 255, 255, 0.5) !important;
         border-radius: 50% !important;
-        margin-left: 10px !important;
-    }}
-
-    /* 4. 暴力隐藏气泡上方的 assistant/user 标签 */
-    [data-testid="stChatMessage"] div[data-testid="stMarkdownContainer"] > p:first-child:has(+ *) {{
-        display: none !important;
-    }
-    div[data-testid="chatAvatar"] + div {{
-        display: flex;
-        flex-direction: column;
-    }}
-    .stChatMessage [data-testid="stWidgetLabel"],
-    .stChatMessage .st-ae,
-    .stChatMessage code {{
-        display: none !important;
-    }}
-
-    /* 5. 【核心】气泡整容：圆角长方形 + 你选的奶油色 */
-    [data-testid="stChatMessage"] {{
-        background-color: transparent !important;
-        padding: 0.8rem 0 !important;
-        gap: 8px !important; /* 头像和气泡优雅间距 */
+        margin-left: 15px !important;
     }
 
-    /* 路辰的气泡 (Assistant) */
-    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarAssistant"]) .stMarkdown {{
-        background-color: #FBF2E2 !important; /* 老大选的路辰奶油黄 */
-        border: 1px solid rgba(192, 160, 128, 0.2) !important; /* 超细金色描边 */
+    /* 气泡美化与角色名隐藏 */
+    [data-testid="stChatMessage"] div[data-testid="stMarkdownContainer"] > p:first-child:has(+ *) {
+        display: none !important;
+    }
+    
+    /* 路辰气泡 #FBF2E2 */
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarAssistant"]) .stMarkdown {
+        background-color: #FBF2E2 !important;
         border-radius: 4px 18px 18px 18px !important;
         padding: 12px 16px !important;
-        color: #5D4037 !important; /* 深棕色文字，保护眼睛且更有质感 */
-        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        color: #5D4037 !important;
     }
-    /* 修改默认头像颜色，防白 */
-    div[data-testid="chatAvatarAssistant"] svg {{
-        fill: #C0A080 !important;
-    }}
 
-    /* 你的气泡 (User) */
-    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) {{
+    /* 用户气泡 #FFEFD7 */
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) {
         flex-direction: row-reverse !important;
     }
-    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) .stMarkdown {{
-        background-color: #FFEFD7 !important; /* 老大选的用户奶油粉 */
-        border: 1px solid rgba(255, 239, 215, 0.3) !important;
+    div[data-testid="stChatMessage"]:has(div[data-testid="chatAvatarUser"]) .stMarkdown {
+        background-color: #FFEFD7 !important;
         border-radius: 18px 4px 18px 18px !important;
         padding: 10px 14px !important;
-        color: #5D4037 !important; /* 深棕色文字 */
-    }
-    /* 修改用户头像颜色 */
-    div[data-testid="chatAvatarUser"] svg {{
-        fill: #5C5C5C !important;
-    }}
-
-    /* 6. 输入框美化 (浮动悬浮感) */
-    .stChatInputContainer {{
-        padding-bottom: 25px !important;
-        background-color: transparent !important;
-    }
-    .stChatInput {{
-        background-color: rgba(255, 255, 255, 0.8) !important; /* 半透明输入框 */
-        border-radius: 20px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+        color: #5D4037 !important;
     }
 </style>
+"""
 
+# 2. 统一渲染（这样写编辑器绝对不会报大括号错误）
+st.markdown(custom_css, unsafe_allow_html=True)
 
-
-""", unsafe_allow_html=True)
 
 # 渲染历史
 for msg in st.session_state.messages:
